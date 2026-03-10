@@ -1,0 +1,23 @@
+<svg width="256" height="256" viewBox="10 10 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 左耳朵 -->
+  <ellipse cx="30" cy="35" rx="12" ry="18" fill="#FF8A65" transform="rotate(-25 30 35)" />
+  <!-- 右耳朵 -->
+  <ellipse cx="70" cy="35" rx="12" ry="18" fill="#FF8A65" transform="rotate(25 70 35)" />
+  <!-- 狗狗头部 -->
+  <ellipse cx="50" cy="55" rx="28" ry="30" fill="#FFA726" />
+  <!-- 左眼睛 -->
+  <circle cx="40" cy="50" r="5" fill="#333" />
+  <circle cx="42" cy="48" r="2" fill="#FFF" />
+  <!-- 右眼睛 -->
+  <circle cx="60" cy="50" r="5" fill="#333" />
+  <circle cx="62" cy="48" r="2" fill="#FFF" />
+  <!-- 鼻子 -->
+  <ellipse cx="50" cy="62" rx="4" ry="3" fill="#333" />
+  <!-- 嘴巴 -->
+  <path d="M 45 65 Q 50 68 55 65" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round" />
+  <!-- 舌头 -->
+  <ellipse cx="50" cy="70" rx="3" ry="4" fill="#FF6B9D" />
+  <!-- 斑点装饰 -->
+  <circle cx="35" cy="60" r="3" fill="#FF8A65" opacity="0.6" />
+  <circle cx="65" cy="58" r="2.5" fill="#FF8A65" opacity="0.6" />
+</svg>
