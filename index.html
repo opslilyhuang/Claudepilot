@@ -1,0 +1,2862 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClaudePilot</title>
+  <link rel="stylesheet" href="./node_modules/xterm/css/xterm.css">
+  <script src="./node_modules/xterm/lib/xterm.js"></script>
+  <script src="./node_modules/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+  <style>
+    :root {
+      /* Morandi Purple Palette */
+      --purple-100: #F5F3F7;
+      --purple-200: #E8E4ED;
+      --purple-300: #D4CDE0;
+      --purple-400: #B8A9C7;
+      --purple-500: #9B8AA8;
+      --purple-600: #7B6B8B;
+      --purple-700: #5D4E6D;
+
+      /* Neutral colors */
+      --gray-50: #FAFAFA;
+      --gray-100: #F5F5F5;
+      --gray-200: #EEEEEE;
+      --gray-300: #E0E0E0;
+      --gray-400: #BDBDBD;
+      --gray-500: #9E9E9E;
+      --gray-600: #757575;
+      --gray-700: #616161;
+      --gray-800: #424242;
+      --gray-900: #212121;
+
+      --bg-primary: #FFFFFF;
+      --bg-secondary: #FAFAFA;
+      --bg-tertiary: #F5F5F5;
+      --border-color: #E8E4ED;
+      --text-primary: #212121;
+      --text-secondary: #757575;
+      --text-muted: #9E9E9E;
+
+      --sidebar-width: 56px;
+      --panel-width: 280px;
+    }
+
+    /* Dark Theme */
+    [data-theme="dark"] {
+      --purple-100: #2D2640;
+      --purple-200: #3D3355;
+      --purple-300: #4D436A;
+      --purple-400: #6D5A8A;
+      --purple-500: #8D7AAA;
+      --purple-600: #AD9ACA;
+      --purple-700: #CDBAEB;
+
+      --gray-50: #1A1A1A;
+      --gray-100: #212121;
+      --gray-200: #2A2A2A;
+      --gray-300: #3A3A3A;
+      --gray-400: #4A4A4A;
+      --gray-500: #6A6A6A;
+      --gray-600: #9A9A9A;
+      --gray-700: #BABABA;
+      --gray-800: #DADADA;
+      --gray-900: #FAFAFA;
+
+      --bg-primary: #1A1A2E;
+      --bg-secondary: #16162A;
+      --bg-tertiary: #12121F;
+      --border-color: #2D2640;
+      --text-primary: #E8E4ED;
+      --text-secondary: #A0A0B0;
+      --text-muted: #6A6A7A;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .app-container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Icon Sidebar */
+    .icon-sidebar {
+      width: var(--sidebar-width);
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 4px;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      background: var(--purple-100);
+      color: var(--purple-600);
+    }
+
+    .icon-btn.active {
+      background: var(--purple-200);
+      color: var(--purple-700);
+    }
+
+    .icon-btn svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .sidebar-spacer {
+      flex: 1;
+    }
+
+    /* Side Panel */
+    .side-panel {
+      width: var(--panel-width);
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gray-400);
+    }
+
+    .status-dot.checking {
+      background: #F59E0B;
+    }
+
+    .status-dot.connected {
+      background: #10B981;
+    }
+
+    .status-dot.error {
+      background: #EF4444;
+    }
+
+    .status-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .new-conversation-btn {
+      margin: 0 12px 12px;
+      padding: 10px 16px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-primary);
+      transition: all 0.15s ease;
+    }
+
+    .new-conversation-btn:hover {
+      border-color: var(--purple-400);
+      background: var(--purple-100);
+    }
+
+    .new-conversation-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .folder-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .folder-btn:hover {
+      border-color: var(--purple-400);
+      background: var(--purple-100);
+    }
+
+    .search-box {
+      margin: 0 12px 12px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 8px 12px 8px 36px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .search-box input:focus {
+      border-color: var(--purple-400);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+    }
+
+    .import-link {
+      padding: 8px 12px;
+      margin: 0 12px 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .import-link:hover {
+      background: var(--purple-100);
+      color: var(--purple-600);
+    }
+
+    .import-link svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .threads-section {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 12px;
+    }
+
+    .threads-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 0;
+    }
+
+    .thread-group {
+      margin-bottom: 8px;
+    }
+
+    .thread-group-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .thread-group-header:hover {
+      background: var(--purple-100);
+    }
+
+    .thread-group-header svg {
+      width: 16px;
+      height: 16px;
+      color: var(--text-secondary);
+    }
+
+    .thread-item {
+      padding: 6px 8px 6px 28px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .thread-item:hover {
+      background: var(--purple-100);
+      color: var(--purple-700);
+    }
+
+    .thread-item.active {
+      background: var(--purple-200);
+      color: var(--purple-700);
+    }
+
+    .thread-time {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .panel-footer {
+      padding: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .version-text {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-primary);
+      position: relative;
+    }
+
+    .view-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .view-content.hidden {
+      display: none !important;
+    }
+
+    /* Chat View */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .chat-welcome {
+      text-align: center;
+      max-width: 500px;
+    }
+
+    .chat-icon {
+      width: 80px;
+      height: 80px;
+      background: var(--gray-200);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+
+    .chat-icon svg {
+      width: 40px;
+      height: 40px;
+      color: var(--gray-500);
+    }
+
+    .chat-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .chat-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 40px;
+      display: none;
+    }
+
+    .messages-container.has-messages {
+      display: block;
+    }
+
+    .message {
+      max-width: 720px;
+      margin: 0 auto 20px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message.user {
+      background: var(--purple-100);
+      border: 1px solid var(--purple-200);
+    }
+
+    .message.assistant {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .message.system {
+      background: var(--gray-100);
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .message.error {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #B91C1C;
+    }
+
+    .chat-input-container {
+      padding: 16px 40px 24px;
+      background: var(--bg-primary);
+    }
+
+    .chat-input-wrapper {
+      max-width: 720px;
+      margin: 0 auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .chat-input-wrapper:focus-within {
+      border-color: var(--purple-400);
+      box-shadow: 0 0 0 3px var(--purple-100);
+    }
+
+    .chat-textarea {
+      width: 100%;
+      padding: 16px 20px 8px;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      min-height: 24px;
+      max-height: 200px;
+    }
+
+    .chat-toolbar {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px 12px;
+      gap: 8px;
+    }
+
+    .toolbar-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .toolbar-btn:hover {
+      background: var(--purple-100);
+      color: var(--purple-600);
+    }
+
+    .toolbar-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .model-selector {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      position: relative;
+    }
+
+    .model-selector:hover {
+      background: var(--purple-100);
+    }
+
+    .model-selector svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .model-dropdown {
+      display: none;
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 4px;
+      min-width: 160px;
+      margin-bottom: 4px;
+    }
+
+    .model-dropdown.show {
+      display: block;
+    }
+
+    .model-option {
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .model-option:hover {
+      background: var(--purple-100);
+    }
+
+    .model-option.active {
+      background: var(--purple-200);
+    }
+
+    .model-option .model-name {
+      display: block;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .model-option .model-desc {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* 用量统计 */
+    .usage-stats {
+      padding: 12px;
+      margin: 8px 12px;
+      background: var(--purple-100);
+      border-radius: 8px;
+    }
+
+    .usage-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .usage-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .usage-row:last-child {
+      margin-bottom: 0;
+    }
+
+    /* 会话项 */
+    .session-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 2px;
+    }
+
+    .session-item:hover {
+      background: var(--purple-100);
+    }
+
+    .session-item.active {
+      background: var(--purple-200);
+    }
+
+    .session-item .session-title {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .session-item .session-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: 8px;
+    }
+
+    /* Mode selector */
+    .mode-selector {
+      display: flex;
+      gap: 4px;
+      margin-right: 8px;
+    }
+
+    .mode-btn {
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .mode-btn:hover {
+      background: var(--purple-100);
+    }
+
+    .mode-btn.active {
+      background: var(--purple-200);
+      color: var(--purple-700);
+    }
+
+    .toolbar-spacer {
+      flex: 1;
+    }
+
+    .send-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--purple-500);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      transition: all 0.15s ease;
+    }
+
+    .send-btn:hover {
+      background: var(--purple-600);
+    }
+
+    .send-btn:disabled {
+      background: var(--gray-300);
+      cursor: not-allowed;
+    }
+
+    .send-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .chat-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 40px 16px;
+    }
+
+    .footer-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer-btn:hover {
+      border-color: var(--purple-400);
+      background: var(--purple-100);
+    }
+
+    .footer-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Terminal View */
+    #terminal-view {
+      background: #1E1E2E;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+    }
+
+    #terminal-view:not(.hidden) {
+      display: flex;
+    }
+
+    .terminal-header {
+      padding: 12px 16px;
+      background: #181825;
+      border-bottom: 1px solid #313244;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .terminal-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #CDD6F4;
+    }
+
+    .terminal-hint {
+      font-size: 13px;
+      color: #6C7086;
+    }
+
+    .terminal-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .terminal-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #313244;
+      background: transparent;
+      cursor: pointer;
+      font-size: 13px;
+      color: #CDD6F4;
+    }
+
+    .terminal-btn:hover {
+      background: #313244;
+    }
+
+    #terminal-container {
+      flex: 1;
+      padding: 8px;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #terminal-container .xterm {
+      height: 100%;
+    }
+
+    #terminal-container .xterm-viewport {
+      overflow-y: auto !important;
+    }
+
+    /* Settings View */
+    .settings-content {
+      padding: 40px;
+      max-width: 600px;
+    }
+
+    .settings-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .settings-section {
+      margin-bottom: 32px;
+    }
+
+    .settings-section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+
+    .settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .settings-item-label {
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    .settings-item-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Auth Notice */
+    .auth-notice {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .auth-notice h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .auth-notice p {
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .auth-notice code {
+      background: var(--purple-100);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, monospace;
+      color: var(--purple-700);
+    }
+
+    .auth-btn {
+      padding: 10px 20px;
+      background: var(--purple-500);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .auth-btn:hover {
+      background: var(--purple-600);
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 16px 20px;
+    }
+
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      background: var(--purple-400);
+      border-radius: 50%;
+      animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-8px); }
+    }
+
+    /* Bridge 样式 */
+    .bridge-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .bridge-card.disabled {
+      opacity: 0.6;
+    }
+
+    .bridge-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+    }
+
+    .bridge-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--purple-100);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--purple-600);
+    }
+
+    .bridge-info {
+      flex: 1;
+    }
+
+    .bridge-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .bridge-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-badge.stopped {
+      background: var(--gray-100);
+      color: var(--text-secondary);
+    }
+
+    .status-badge.connecting {
+      background: #FEF3C7;
+      color: #D97706;
+    }
+
+    .status-badge.connected {
+      background: #D1FAE5;
+      color: #059669;
+    }
+
+    .status-badge.error {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+
+    .status-badge.coming-soon {
+      background: var(--purple-100);
+      color: var(--purple-600);
+    }
+
+    .bridge-config {
+      padding: 0 20px 20px;
+      border-top: 1px solid var(--border-color);
+      margin-top: 0;
+      padding-top: 20px;
+    }
+
+    .config-field {
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .config-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .config-field input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--bg-secondary);
+      outline: none;
+    }
+
+    .config-field input:focus {
+      border-color: var(--purple-400);
+      box-shadow: 0 0 0 3px var(--purple-100);
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 12px;
+      top: 32px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .toggle-password:hover {
+      color: var(--text-secondary);
+    }
+
+    .config-help {
+      margin-bottom: 20px;
+    }
+
+    .config-help details {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .config-help summary {
+      cursor: pointer;
+      color: var(--purple-600);
+      margin-bottom: 8px;
+    }
+
+    .config-help ol {
+      margin-left: 20px;
+      line-height: 1.8;
+    }
+
+    .config-help a {
+      color: var(--purple-600);
+      text-decoration: none;
+    }
+
+    .config-help a:hover {
+      text-decoration: underline;
+    }
+
+    .config-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      padding: 10px 20px;
+      background: var(--purple-500);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: var(--purple-600);
+    }
+
+    .btn-primary:disabled {
+      background: var(--gray-300);
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      padding: 10px 20px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: var(--purple-100);
+      border-color: var(--purple-400);
+    }
+
+    .bridge-logs {
+      border-top: 1px solid var(--border-color);
+      background: #1E1E2E;
+    }
+
+    .logs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #181825;
+      color: #CDD6F4;
+      font-size: 13px;
+    }
+
+    .logs-header button {
+      background: none;
+      border: none;
+      color: #6C7086;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .logs-header button:hover {
+      color: #CDD6F4;
+    }
+
+    .logs-content {
+      height: 200px;
+      overflow-y: auto;
+      padding: 12px 16px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 12px;
+      color: #CDD6F4;
+      line-height: 1.6;
+    }
+
+    .logs-content .log-line {
+      margin-bottom: 4px;
+    }
+
+    .logs-content .log-line.error {
+      color: #F38BA8;
+    }
+
+    .logs-content .log-line.success {
+      color: #A6E3A1;
+    }
+
+    /* Working Directory Display */
+    .working-dir-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      margin: 0 12px 12px;
+      background: var(--purple-100);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .working-dir-display svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .working-dir-path {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Attachments */
+    .attachments-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 20px 0;
+    }
+
+    .attachment-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--purple-100);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-primary);
+    }
+
+    .attachment-chip svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .attachment-chip .remove-btn {
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .attachment-chip .remove-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .attachment-preview {
+      width: 32px;
+      height: 32px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    /* Mode Selector in Chat */
+    .chat-mode-selector {
+      display: flex;
+      gap: 4px;
+      padding: 0 12px 12px;
+      margin: 0 40px;
+      max-width: 720px;
+    }
+
+    .mode-chip {
+      padding: 6px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+
+    .mode-chip:hover {
+      border-color: var(--purple-400);
+      background: var(--purple-100);
+    }
+
+    .mode-chip.active {
+      border-color: var(--purple-500);
+      background: var(--purple-200);
+      color: var(--purple-700);
+    }
+
+    /* Checkpoints Panel */
+    .checkpoints-panel {
+      padding: 12px;
+      margin: 8px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+
+    .checkpoints-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .checkpoints-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .checkpoint-btn {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: none;
+      background: var(--purple-100);
+      cursor: pointer;
+      font-size: 11px;
+      color: var(--purple-600);
+    }
+
+    .checkpoint-btn:hover {
+      background: var(--purple-200);
+    }
+
+    .checkpoint-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .checkpoint-item:hover {
+      background: var(--purple-100);
+    }
+
+    .checkpoint-item svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* File Browser */
+    .file-browser {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .file-item:hover {
+      background: var(--purple-100);
+    }
+
+    .file-item svg {
+      width: 16px;
+      height: 16px;
+      color: var(--text-secondary);
+    }
+
+    .file-item.folder svg {
+      color: var(--purple-500);
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: relative;
+      width: 48px;
+      height: 24px;
+      background: var(--gray-300);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .theme-toggle.dark {
+      background: var(--purple-500);
+    }
+
+    .theme-toggle-handle {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .theme-toggle.dark .theme-toggle-handle {
+      transform: translateX(24px);
+    }
+
+    .theme-toggle-handle svg {
+      width: 12px;
+      height: 12px;
+      color: var(--gray-600);
+    }
+
+    /* Language Selector */
+    .lang-selector {
+      display: flex;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .lang-btn {
+      padding: 6px 12px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .lang-btn:hover {
+      background: var(--purple-100);
+    }
+
+    .lang-btn.active {
+      background: var(--purple-200);
+      color: var(--purple-700);
+    }
+
+    /* Workspace Editor */
+    .workspace-editor {
+      padding: 20px;
+    }
+
+    .workspace-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .workspace-tab {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-radius: 6px 6px 0 0;
+    }
+
+    .workspace-tab:hover {
+      background: var(--purple-100);
+    }
+
+    .workspace-tab.active {
+      background: var(--purple-200);
+      color: var(--purple-700);
+    }
+
+    .workspace-content {
+      height: 300px;
+    }
+
+    .workspace-textarea {
+      width: 100%;
+      height: 100%;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 13px;
+      resize: none;
+      outline: none;
+    }
+
+    .workspace-textarea:focus {
+      border-color: var(--purple-400);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Icon Sidebar -->
+    <div class="icon-sidebar">
+      <button class="icon-btn active" data-view="chat" title="Chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </button>
+      <button class="icon-btn" data-view="terminal" title="Terminal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 4 5"/>
+          <line x1="12" y1="19" x2="20" y2="19"/>
+        </svg>
+      </button>
+      <button class="icon-btn" data-view="mcp" title="MCP">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+      <button class="icon-btn" data-view="skills" title="Skills">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+      </button>
+      <button class="icon-btn" data-view="bridge" title="Bridge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+          <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+          <circle cx="12" cy="20" r="1"/>
+        </svg>
+      </button>
+
+      <div class="sidebar-spacer"></div>
+
+      <button class="icon-btn" data-view="settings" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Side Panel -->
+    <div class="side-panel">
+      <div class="panel-header">
+        <div class="status-dot" id="status-dot"></div>
+        <span class="status-text" id="status-text">Checking</span>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin: 0 12px 12px;">
+        <button class="new-conversation-btn" id="new-conversation-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span data-i18n="newConversation">New Conversation</span>
+        </button>
+        <button class="folder-btn" id="folder-btn" title="Open Folder" onclick="selectWorkingDir()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Working Directory Display -->
+      <div class="working-dir-display" id="working-dir-display" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="working-dir-path" id="working-dir-path">~/</span>
+      </div>
+
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Search sessions...">
+      </div>
+
+      <div class="import-link" id="import-link" onclick="importCliHistory()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Import from Claude Code
+      </div>
+
+      <!-- Token 用量统计 -->
+      <div class="usage-stats" id="usage-stats">
+        <div class="usage-title" data-i18n="todayUsage">TODAY'S USAGE</div>
+        <div class="usage-row">
+          <span data-i18n="tokens">Tokens</span>
+          <span id="usage-tokens">0</span>
+        </div>
+        <div class="usage-row">
+          <span data-i18n="cost">Cost</span>
+          <span id="usage-cost">$0.00</span>
+        </div>
+      </div>
+
+      <!-- Checkpoints -->
+      <div class="checkpoints-panel" id="checkpoints-panel" style="display: none;">
+        <div class="checkpoints-header">
+          <span class="checkpoints-title" data-i18n="checkpoints">CHECKPOINTS</span>
+          <button class="checkpoint-btn" onclick="createCheckpoint()" data-i18n="save">Save</button>
+        </div>
+        <div id="checkpoints-list">
+          <!-- Checkpoints will be populated here -->
+        </div>
+      </div>
+
+      <div class="threads-section">
+        <div class="threads-title">THREADS</div>
+        <div id="threads-list">
+          <!-- Threads will be populated here -->
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="version-text" id="version-text">v0.1.0</span>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Chat View -->
+      <div id="chat-view" class="view-content">
+        <div class="chat-area" id="chat-welcome">
+          <div class="chat-welcome">
+            <div class="chat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="7.5 4.21 12 6.81 16.5 4.21"/>
+                <polyline points="7.5 19.79 7.5 14.6 3 12"/>
+                <polyline points="21 12 16.5 14.6 16.5 19.79"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+              </svg>
+            </div>
+            <div class="chat-title">Claude Chat</div>
+            <div class="chat-subtitle">Start a conversation with ClaudePilot. Ask questions, get help with code, or explore ideas.</div>
+          </div>
+        </div>
+
+        <div class="messages-container" id="messages-container"></div>
+
+        <div class="auth-notice" id="auth-notice" style="display: none;">
+          <h3>Authentication Required</h3>
+          <p>Please run <code>claude login</code> in the terminal to authenticate your account.</p>
+          <button class="auth-btn" onclick="document.querySelector('.icon-btn[data-view=terminal]').click()">
+            Open Terminal
+          </button>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="chat-mode-selector" id="chat-mode-selector">
+          <button class="mode-chip active" data-mode="code" onclick="selectMode('code')">
+            <span data-i18n="modeCode">Code</span>
+          </button>
+          <button class="mode-chip" data-mode="plan" onclick="selectMode('plan')">
+            <span data-i18n="modePlan">Plan</span>
+          </button>
+          <button class="mode-chip" data-mode="ask" onclick="selectMode('ask')">
+            <span data-i18n="modeAsk">Ask</span>
+          </button>
+        </div>
+
+        <div class="chat-input-container">
+          <!-- Attachments Area -->
+          <div class="attachments-area" id="attachments-area" style="display: none;"></div>
+
+          <div class="chat-input-wrapper">
+            <textarea class="chat-textarea" id="chat-input" placeholder="Message Claude..." rows="1"></textarea>
+            <div class="chat-toolbar">
+              <button class="toolbar-btn" title="Attach file" onclick="selectAttachment()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+              </button>
+              <button class="toolbar-btn" title="Commands">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="4" y1="9" x2="20" y2="9"/>
+                  <line x1="4" y1="15" x2="20" y2="15"/>
+                  <line x1="10" y1="3" x2="8" y2="21"/>
+                  <line x1="16" y1="3" x2="14" y2="21"/>
+                </svg>
+              </button>
+              <div class="model-selector" id="model-selector" onclick="toggleModelDropdown()">
+                <span id="current-model-name">Sonnet 4</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+                <div class="model-dropdown" id="model-dropdown">
+                  <div class="model-option" data-model="sonnet" onclick="selectModel('sonnet', event)">
+                    <span class="model-name">Sonnet 4</span>
+                    <span class="model-desc">Fast & capable</span>
+                  </div>
+                  <div class="model-option" data-model="opus" onclick="selectModel('opus', event)">
+                    <span class="model-name">Opus 4</span>
+                    <span class="model-desc">Most powerful</span>
+                  </div>
+                  <div class="model-option" data-model="haiku" onclick="selectModel('haiku', event)">
+                    <span class="model-name">Haiku 3.5</span>
+                    <span class="model-desc">Fast & affordable</span>
+                  </div>
+                </div>
+              </div>
+              <div class="toolbar-spacer"></div>
+              <button class="send-btn" id="send-btn" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="19" x2="12" y2="5"/>
+                  <polyline points="5 12 12 5 19 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-footer">
+          <button class="footer-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+            Design Agent
+          </button>
+          <button class="footer-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            Default
+          </button>
+        </div>
+      </div>
+
+      <!-- Terminal View -->
+      <div id="terminal-view" class="view-content hidden">
+        <div class="terminal-header">
+          <span class="terminal-title">Terminal</span>
+          <span class="terminal-hint">Run <code style="background: #313244; padding: 2px 6px; border-radius: 4px;">claude login</code> to authenticate</span>
+          <div class="terminal-actions">
+            <button class="terminal-btn" id="terminal-clear-btn">Clear</button>
+            <button class="terminal-btn" id="terminal-reconnect-btn">Reconnect</button>
+          </div>
+        </div>
+        <div id="terminal-container"></div>
+      </div>
+
+      <!-- Settings View -->
+      <div id="settings-view" class="view-content hidden">
+        <div class="settings-content">
+          <h1 class="settings-title" data-i18n="settings">Settings</h1>
+
+          <div class="settings-section">
+            <h2 class="settings-section-title" data-i18n="settingsAppearance">Appearance</h2>
+            <div class="settings-item">
+              <div>
+                <div class="settings-item-label" data-i18n="settingsTheme">Theme</div>
+                <div class="settings-item-desc" data-i18n="settingsThemeDesc">Switch between light and dark mode</div>
+              </div>
+              <div class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">
+                <div class="theme-toggle-handle">
+                  <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                  </svg>
+                  <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-item">
+              <div>
+                <div class="settings-item-label" data-i18n="settingsLanguage">Language</div>
+                <div class="settings-item-desc" data-i18n="settingsLanguageDesc">Select interface language</div>
+              </div>
+              <div class="lang-selector">
+                <button class="lang-btn active" data-lang="zh" onclick="setLanguage('zh')">中文</button>
+                <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">EN</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h2 class="settings-section-title" data-i18n="settingsAuth">Authentication</h2>
+            <div class="settings-item">
+              <div>
+                <div class="settings-item-label" data-i18n="settingsCLIStatus">Claude CLI Status</div>
+                <div class="settings-item-desc" id="cli-status">Checking...</div>
+              </div>
+              <button class="auth-btn" onclick="document.querySelector('.icon-btn[data-view=terminal]').click()" data-i18n="openTerminal">
+                Open Terminal
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h2 class="settings-section-title" data-i18n="settingsWorkspace">Assistant Workspace</h2>
+            <div class="settings-item">
+              <div>
+                <div class="settings-item-label" data-i18n="settingsWorkspaceInit">Initialize Workspace</div>
+                <div class="settings-item-desc" data-i18n="settingsWorkspaceInitDesc">Create soul.md, user.md, claude.md, memory.md in working directory</div>
+              </div>
+              <button class="auth-btn" onclick="initWorkspace()" data-i18n="initialize">
+                Initialize
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Other views placeholders -->
+      <div id="mcp-view" class="view-content hidden">
+        <div class="settings-content">
+          <h1 class="settings-title">MCP Servers</h1>
+          <p style="color: var(--text-secondary);">Configure Model Context Protocol servers.</p>
+        </div>
+      </div>
+
+      <div id="skills-view" class="view-content hidden">
+        <div class="settings-content">
+          <h1 class="settings-title">Skills</h1>
+          <p style="color: var(--text-secondary);">Manage custom skills and commands.</p>
+        </div>
+      </div>
+
+      <div id="bridge-view" class="view-content hidden">
+        <div class="settings-content" style="max-width: 700px;">
+          <h1 class="settings-title">Bridge</h1>
+          <p style="color: var(--text-secondary); margin-bottom: 24px;">
+            连接 IM 平台，通过飞书/Telegram/Discord 和 Claude 对话
+          </p>
+
+          <!-- 飞书配置 -->
+          <div class="bridge-card" id="feishu-card">
+            <div class="bridge-header">
+              <div class="bridge-icon">
+                <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="bridge-info">
+                <div class="bridge-name">飞书 / Feishu</div>
+                <div class="bridge-desc">通过飞书机器人与 Claude 对话</div>
+              </div>
+              <div class="bridge-status" id="feishu-status">
+                <span class="status-badge stopped">未连接</span>
+              </div>
+            </div>
+
+            <div class="bridge-config">
+              <div class="config-field">
+                <label>App ID</label>
+                <input type="text" id="feishu-app-id" placeholder="cli_xxxxxxxx" />
+              </div>
+              <div class="config-field">
+                <label>App Secret</label>
+                <input type="password" id="feishu-app-secret" placeholder="输入 App Secret" />
+                <button class="toggle-password" onclick="togglePassword('feishu-app-secret')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="config-help">
+                <details>
+                  <summary>如何获取 App ID 和 App Secret？</summary>
+                  <ol>
+                    <li>访问 <a href="#" onclick="openExternal('https://open.feishu.cn/app')">飞书开放平台</a></li>
+                    <li>创建企业自建应用，获取 App ID 和 App Secret</li>
+                    <li>添加机器人能力，配置消息权限</li>
+                    <li>事件订阅选择「长连接」方式，添加 im.message.receive_v1 事件</li>
+                    <li>发布应用版本并审核通过</li>
+                  </ol>
+                </details>
+              </div>
+
+              <div class="config-actions">
+                <button class="btn-secondary" id="feishu-save-btn" onclick="saveFeishuConfig()">
+                  保存配置
+                </button>
+                <button class="btn-primary" id="feishu-connect-btn" onclick="toggleFeishuBridge()">
+                  连接
+                </button>
+              </div>
+            </div>
+
+            <!-- 日志区域 -->
+            <div class="bridge-logs" id="feishu-logs" style="display: none;">
+              <div class="logs-header">
+                <span>运行日志</span>
+                <button onclick="clearLogs('feishu')">清空</button>
+              </div>
+              <div class="logs-content" id="feishu-logs-content"></div>
+            </div>
+          </div>
+
+          <!-- 其他平台占位 -->
+          <div class="bridge-card disabled">
+            <div class="bridge-header">
+              <div class="bridge-icon">
+                <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+                  <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="bridge-info">
+                <div class="bridge-name">Telegram</div>
+                <div class="bridge-desc">即将支持</div>
+              </div>
+              <span class="status-badge coming-soon">Coming Soon</span>
+            </div>
+          </div>
+
+          <div class="bridge-card disabled">
+            <div class="bridge-header">
+              <div class="bridge-icon">
+                <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+                  <circle cx="9" cy="12" r="1" fill="currentColor"/>
+                  <circle cx="15" cy="12" r="1" fill="currentColor"/>
+                  <path d="M7.5 19c3 1 6 1 9 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M20.6 9.4a9 9 0 1 0-3.4 11.8l3.8.8-.8-3.8a9 9 0 0 0-.6-8.8z" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="bridge-info">
+                <div class="bridge-name">Discord</div>
+                <div class="bridge-desc">即将支持</div>
+              </div>
+              <span class="status-badge coming-soon">Coming Soon</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== i18n Translations ====================
+    const i18n = {
+      zh: {
+        newConversation: '新对话',
+        todayUsage: '今日用量',
+        tokens: 'Tokens',
+        cost: '费用',
+        checkpoints: '检查点',
+        save: '保存',
+        modeCode: '编程',
+        modePlan: '规划',
+        modeAsk: '问答',
+        settings: '设置',
+        settingsAppearance: '外观',
+        settingsTheme: '主题',
+        settingsThemeDesc: '切换浅色/深色模式',
+        settingsLanguage: '语言',
+        settingsLanguageDesc: '选择界面语言',
+        settingsAuth: '认证',
+        settingsCLIStatus: 'Claude CLI 状态',
+        openTerminal: '打开终端',
+        settingsWorkspace: 'Assistant 工作区',
+        settingsWorkspaceInit: '初始化工作区',
+        settingsWorkspaceInitDesc: '在工作目录创建 soul.md, user.md, claude.md, memory.md',
+        initialize: '初始化',
+        threads: '会话',
+        searchSessions: '搜索会话...',
+        messagePlaceholder: '输入消息...',
+        importFromCLI: '从 Claude Code 导入',
+        connected: '已连接',
+        notAuthenticated: '未认证',
+        checking: '检查中',
+        rollbackTo: '回退到',
+        checkpoint: '检查点'
+      },
+      en: {
+        newConversation: 'New Conversation',
+        todayUsage: "TODAY'S USAGE",
+        tokens: 'Tokens',
+        cost: 'Cost',
+        checkpoints: 'CHECKPOINTS',
+        save: 'Save',
+        modeCode: 'Code',
+        modePlan: 'Plan',
+        modeAsk: 'Ask',
+        settings: 'Settings',
+        settingsAppearance: 'Appearance',
+        settingsTheme: 'Theme',
+        settingsThemeDesc: 'Switch between light and dark mode',
+        settingsLanguage: 'Language',
+        settingsLanguageDesc: 'Select interface language',
+        settingsAuth: 'Authentication',
+        settingsCLIStatus: 'Claude CLI Status',
+        openTerminal: 'Open Terminal',
+        settingsWorkspace: 'Assistant Workspace',
+        settingsWorkspaceInit: 'Initialize Workspace',
+        settingsWorkspaceInitDesc: 'Create soul.md, user.md, claude.md, memory.md in working directory',
+        initialize: 'Initialize',
+        threads: 'THREADS',
+        searchSessions: 'Search sessions...',
+        messagePlaceholder: 'Message Claude...',
+        importFromCLI: 'Import from Claude Code',
+        connected: 'Connected',
+        notAuthenticated: 'Not authenticated',
+        checking: 'Checking',
+        rollbackTo: 'Rollback to',
+        checkpoint: 'Checkpoint'
+      }
+    };
+
+    let currentLang = 'zh';
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+      });
+
+      // Update all i18n elements
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (i18n[lang][key]) {
+          el.textContent = i18n[lang][key];
+        }
+      });
+
+      // Update placeholders
+      document.getElementById('chat-input').placeholder = i18n[lang].messagePlaceholder;
+      document.querySelector('.search-box input').placeholder = i18n[lang].searchSessions;
+
+      // Save preference
+      if (window.settingsAPI) {
+        window.settingsAPI.set('language', lang);
+      }
+    }
+
+    // ==================== Theme ====================
+    let isDarkTheme = false;
+
+    function toggleTheme() {
+      isDarkTheme = !isDarkTheme;
+      document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+      document.getElementById('theme-toggle').classList.toggle('dark', isDarkTheme);
+      document.getElementById('theme-icon-sun').style.display = isDarkTheme ? 'none' : 'block';
+      document.getElementById('theme-icon-moon').style.display = isDarkTheme ? 'block' : 'none';
+
+      // Save preference
+      if (window.settingsAPI) {
+        window.settingsAPI.set('theme', isDarkTheme ? 'dark' : 'light');
+      }
+    }
+
+    // ==================== Working Directory ====================
+    let currentWorkingDir = null;
+
+    async function selectWorkingDir() {
+      if (!window.workingDirAPI) return;
+
+      const result = await window.workingDirAPI.select();
+      if (result.success) {
+        currentWorkingDir = result.path;
+        updateWorkingDirDisplay();
+      }
+    }
+
+    function updateWorkingDirDisplay() {
+      const display = document.getElementById('working-dir-display');
+      const pathEl = document.getElementById('working-dir-path');
+
+      if (currentWorkingDir) {
+        display.style.display = 'flex';
+        // Show shortened path
+        const parts = currentWorkingDir.split('/');
+        pathEl.textContent = parts.length > 3 ? '.../' + parts.slice(-2).join('/') : currentWorkingDir;
+        pathEl.title = currentWorkingDir;
+      } else {
+        display.style.display = 'none';
+      }
+    }
+
+    // ==================== Mode Selection ====================
+    let currentMode = 'code';
+
+    function selectMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.mode-chip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.mode === mode);
+      });
+    }
+
+    // ==================== Attachments ====================
+    let attachments = [];
+
+    async function selectAttachment() {
+      if (!window.attachmentAPI) return;
+
+      const result = await window.attachmentAPI.select();
+      if (result.success && result.attachments) {
+        attachments = [...attachments, ...result.attachments];
+        renderAttachments();
+      }
+    }
+
+    function renderAttachments() {
+      const area = document.getElementById('attachments-area');
+      if (attachments.length === 0) {
+        area.style.display = 'none';
+        return;
+      }
+
+      area.style.display = 'flex';
+      area.innerHTML = attachments.map((att, idx) => `
+        <div class="attachment-chip">
+          ${att.isImage && att.base64 ? `<img class="attachment-preview" src="data:image/${att.ext.slice(1)};base64,${att.base64}" />` : `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+              <polyline points="13 2 13 9 20 9"/>
+            </svg>
+          `}
+          <span>${att.name}</span>
+          <span class="remove-btn" onclick="removeAttachment(${idx})">×</span>
+        </div>
+      `).join('');
+    }
+
+    function removeAttachment(idx) {
+      attachments.splice(idx, 1);
+      renderAttachments();
+    }
+
+    // ==================== Checkpoints ====================
+    async function loadCheckpoints() {
+      if (!window.checkpointAPI || !currentSessionId) return;
+
+      const checkpoints = await window.checkpointAPI.list(currentSessionId);
+      const panel = document.getElementById('checkpoints-panel');
+      const list = document.getElementById('checkpoints-list');
+
+      if (checkpoints.length > 0) {
+        panel.style.display = 'block';
+        list.innerHTML = checkpoints.map(cp => `
+          <div class="checkpoint-item" onclick="rollbackToCheckpoint('${cp.id}')" title="${i18n[currentLang].rollbackTo} ${cp.name}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>${cp.name} (${cp.message_count} msgs)</span>
+          </div>
+        `).join('');
+      } else {
+        panel.style.display = currentSessionId ? 'block' : 'none';
+        list.innerHTML = `<div style="font-size: 12px; color: var(--text-muted); padding: 4px;">No checkpoints</div>`;
+      }
+    }
+
+    async function createCheckpoint() {
+      if (!window.checkpointAPI || !currentSessionId) return;
+
+      const name = i18n[currentLang].checkpoint + ' ' + new Date().toLocaleTimeString();
+      await window.checkpointAPI.create(currentSessionId, name);
+      await loadCheckpoints();
+    }
+
+    async function rollbackToCheckpoint(checkpointId) {
+      if (!window.checkpointAPI || !currentSessionId) return;
+
+      if (confirm('Rollback to this checkpoint? Messages after this point will be deleted.')) {
+        await window.checkpointAPI.rollback(currentSessionId, checkpointId);
+        await loadSession(currentSessionId);
+        await loadCheckpoints();
+      }
+    }
+
+    // ==================== Workspace ====================
+    async function initWorkspace() {
+      if (!window.workspaceAPI) return;
+
+      const result = await window.workspaceAPI.init(currentWorkingDir);
+      if (result.success) {
+        alert('Workspace initialized successfully!\n\nCreated files:\n- soul.md\n- user.md\n- claude.md\n- memory.md');
+      } else {
+        alert('Failed to initialize workspace: ' + result.error);
+      }
+    }
+
+    // ==================== View Switching ====================
+    document.querySelectorAll('.icon-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const view = btn.dataset.view;
+        if (!view) return;
+
+        // Update active state
+        document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Hide all views
+        document.querySelectorAll('.view-content').forEach(v => v.classList.add('hidden'));
+
+        // Show target view
+        const targetView = document.getElementById(`${view}-view`);
+        if (targetView) {
+          targetView.classList.remove('hidden');
+        }
+
+        // Handle terminal view
+        if (view === 'terminal') {
+          // 首次打开时初始化终端
+          if (!terminalInitialized) {
+            await initTerminal();
+          } else {
+            focusTerminal();
+          }
+        }
+
+        // Check auth if switching to chat view
+        if (view === 'chat') {
+          checkAuthStatus();
+        }
+      });
+    });
+
+    // ==================== Terminal ====================
+    let term = null;
+    let fitAddon = null;
+    let terminalInitialized = false;
+
+    async function initTerminal() {
+      if (terminalInitialized) return;
+      terminalInitialized = true;
+
+      console.log('Initializing terminal...');
+      console.log('Terminal:', Terminal);
+      console.log('FitAddon:', FitAddon);
+
+      // FitAddon 是作为 { FitAddon: class } 导出的
+      const FitAddonClass = FitAddon.FitAddon || FitAddon;
+
+      term = new Terminal({
+        theme: {
+          background: '#1E1E2E',
+          foreground: '#CDD6F4',
+          cursor: '#F5E0DC',
+          cursorAccent: '#1E1E2E',
+          selection: 'rgba(203, 166, 247, 0.3)',
+          black: '#45475A',
+          red: '#F38BA8',
+          green: '#A6E3A1',
+          yellow: '#F9E2AF',
+          blue: '#89B4FA',
+          magenta: '#CBA6F7',
+          cyan: '#94E2D5',
+          white: '#BAC2DE',
+          brightBlack: '#585B70',
+          brightRed: '#F38BA8',
+          brightGreen: '#A6E3A1',
+          brightYellow: '#F9E2AF',
+          brightBlue: '#89B4FA',
+          brightMagenta: '#CBA6F7',
+          brightCyan: '#94E2D5',
+          brightWhite: '#A6ADC8'
+        },
+        fontFamily: 'SF Mono, Menlo, Monaco, "Courier New", monospace',
+        fontSize: 14,
+        cursorBlink: true,
+        scrollback: 10000,
+        allowProposedApi: true
+      });
+
+      fitAddon = new FitAddonClass();
+      term.loadAddon(fitAddon);
+
+      const container = document.getElementById('terminal-container');
+      term.open(container);
+
+      // 点击终端区域时聚焦
+      container.addEventListener('click', () => {
+        term.focus();
+      });
+
+      // 设置输出回调
+      window.terminalAPI.onOutput((data) => {
+        term.write(data);
+      });
+
+      // 设置输入回调
+      term.onData((data) => {
+        window.terminalAPI.sendInput(data);
+      });
+
+      window.terminalAPI.onExit((code) => {
+        term.writeln(`\r\n\x1b[33mTerminal exited (code: ${code})\x1b[0m`);
+      });
+
+      // 创建终端连接
+      const result = await createTerminalConnection();
+      console.log('Terminal connection result:', result);
+
+      // 延迟 fit 以确保容器已渲染
+      setTimeout(() => {
+        try {
+          fitAddon.fit();
+          console.log('Terminal size:', term.cols, 'x', term.rows);
+          window.terminalAPI.resize(term.cols, term.rows);
+          term.focus();
+          console.log('Terminal focused');
+        } catch (e) {
+          console.error('Error fitting terminal:', e);
+        }
+      }, 200);
+
+      // 监听窗口大小变化
+      const resizeObserver = new ResizeObserver(() => {
+        if (term && fitAddon && !document.getElementById('terminal-view').classList.contains('hidden')) {
+          fitAddon.fit();
+          window.terminalAPI.resize(term.cols, term.rows);
+        }
+      });
+      resizeObserver.observe(container);
+    }
+
+    async function createTerminalConnection() {
+      try {
+        const result = await window.terminalAPI.create();
+        console.log('Terminal connection created:', result);
+        return result;
+      } catch (error) {
+        console.error('Failed to create terminal:', error);
+        if (term) {
+          term.writeln('\x1b[31mFailed to create terminal\x1b[0m');
+        }
+        return { success: false, error: error.message };
+      }
+    }
+
+    function focusTerminal() {
+      if (term && fitAddon) {
+        setTimeout(() => {
+          fitAddon.fit();
+          window.terminalAPI.resize(term.cols, term.rows);
+          term.focus();
+        }, 50);
+      }
+    }
+
+    document.getElementById('terminal-clear-btn').addEventListener('click', () => {
+      if (term) {
+        term.clear();
+        term.focus();
+      }
+    });
+
+    document.getElementById('terminal-reconnect-btn').addEventListener('click', async () => {
+      if (term) {
+        term.clear();
+        term.writeln('\x1b[33mReconnecting...\x1b[0m\r\n');
+        await createTerminalConnection();
+        term.focus();
+      }
+    });
+
+    // ==================== Chat ====================
+    let isAuthenticated = false;
+    let isWaitingResponse = false;
+    let currentModel = 'sonnet';
+    let currentSessionId = null;
+    let sessions = [];
+
+    const MODEL_NAMES = {
+      'sonnet': 'Sonnet 4',
+      'opus': 'Opus 4',
+      'haiku': 'Haiku 3.5'
+    };
+
+    // 模型选择
+    function toggleModelDropdown() {
+      const dropdown = document.getElementById('model-dropdown');
+      dropdown.classList.toggle('show');
+    }
+
+    function selectModel(model, event) {
+      event.stopPropagation();
+      currentModel = model;
+      document.getElementById('current-model-name').textContent = MODEL_NAMES[model];
+      document.getElementById('model-dropdown').classList.remove('show');
+
+      // 更新选中状态
+      document.querySelectorAll('.model-option').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.model === model);
+      });
+    }
+
+    // 点击外部关闭下拉
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.model-selector')) {
+        document.getElementById('model-dropdown')?.classList.remove('show');
+      }
+    });
+
+    // 加载会话列表
+    async function loadSessions() {
+      if (!window.sessionAPI) return;
+
+      sessions = await window.sessionAPI.list();
+      renderSessions();
+    }
+
+    function renderSessions() {
+      const list = document.getElementById('threads-list');
+      if (!list) return;
+
+      if (sessions.length === 0) {
+        list.innerHTML = '<div style="padding: 12px; color: var(--text-muted); font-size: 13px;">No conversations yet</div>';
+        return;
+      }
+
+      list.innerHTML = sessions.map(s => `
+        <div class="session-item ${s.id === currentSessionId ? 'active' : ''}" onclick="loadSession('${s.id}')">
+          <span class="session-title">${escapeHtml(s.title)}</span>
+          <span class="session-time">${formatTime(s.updated_at)}</span>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = now - date;
+
+      if (diff < 60000) return 'now';
+      if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h';
+      return Math.floor(diff / 86400000) + 'd';
+    }
+
+    async function loadSession(sessionId) {
+      currentSessionId = sessionId;
+
+      const messages = await window.messageAPI.list(sessionId);
+      const container = document.getElementById('messages-container');
+      const welcome = document.getElementById('chat-welcome');
+
+      container.innerHTML = '';
+
+      if (messages.length > 0) {
+        welcome.style.display = 'none';
+        container.classList.add('has-messages');
+
+        for (const msg of messages) {
+          addMessage(msg.content, msg.role);
+        }
+      } else {
+        welcome.style.display = 'flex';
+        container.classList.remove('has-messages');
+      }
+
+      renderSessions();
+      await loadCheckpoints();
+    }
+
+    // 用量统计
+    async function loadUsageStats() {
+      if (!window.usageAPI) return;
+
+      const today = await window.usageAPI.today();
+      let totalTokens = 0;
+      let totalCost = 0;
+
+      for (const stat of today) {
+        totalTokens += stat.input_tokens + stat.output_tokens;
+        totalCost += stat.cost;
+      }
+
+      document.getElementById('usage-tokens').textContent = totalTokens.toLocaleString();
+      document.getElementById('usage-cost').textContent = '$' + totalCost.toFixed(4);
+    }
+
+    // 导入 CLI 历史
+    async function importCliHistory() {
+      if (!window.importAPI) return;
+
+      const result = await window.importAPI.importCliHistory();
+
+      if (result.success && result.sessions?.length > 0) {
+        await loadSessions();
+        alert(`Successfully imported ${result.sessions.length} session(s)`);
+      }
+    }
+
+    async function checkAuthStatus() {
+      const statusDot = document.getElementById('status-dot');
+      const statusText = document.getElementById('status-text');
+      const authNotice = document.getElementById('auth-notice');
+      const chatWelcome = document.getElementById('chat-welcome');
+      const sendBtn = document.getElementById('send-btn');
+      const cliStatus = document.getElementById('cli-status');
+
+      statusDot.className = 'status-dot checking';
+      statusText.textContent = 'Checking';
+
+      try {
+        isAuthenticated = await window.chatAPI.checkAuth();
+
+        if (isAuthenticated) {
+          statusDot.className = 'status-dot connected';
+          statusText.textContent = 'Connected';
+          authNotice.style.display = 'none';
+          chatWelcome.style.display = 'flex';
+          sendBtn.disabled = false;
+          cliStatus.textContent = 'Authenticated';
+        } else {
+          statusDot.className = 'status-dot error';
+          statusText.textContent = 'Not authenticated';
+          authNotice.style.display = 'flex';
+          chatWelcome.style.display = 'none';
+          sendBtn.disabled = true;
+          cliStatus.textContent = 'Not authenticated - run "claude login" in terminal';
+        }
+      } catch (error) {
+        statusDot.className = 'status-dot error';
+        statusText.textContent = 'Error';
+        sendBtn.disabled = true;
+        cliStatus.textContent = 'Error checking status';
+      }
+    }
+
+    function addMessage(content, type) {
+      const container = document.getElementById('messages-container');
+      const welcome = document.getElementById('chat-welcome');
+
+      welcome.style.display = 'none';
+      container.classList.add('has-messages');
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${type}`;
+      messageDiv.textContent = content;
+      container.appendChild(messageDiv);
+      container.scrollTop = container.scrollHeight;
+
+      return messageDiv;
+    }
+
+    function addTypingIndicator() {
+      const container = document.getElementById('messages-container');
+      const indicator = document.createElement('div');
+      indicator.className = 'message assistant typing-indicator';
+      indicator.id = 'typing-indicator';
+      indicator.innerHTML = '<span></span><span></span><span></span>';
+      container.appendChild(indicator);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+      const indicator = document.getElementById('typing-indicator');
+      if (indicator) indicator.remove();
+    }
+
+    async function sendChatMessage() {
+      const chatInput = document.getElementById('chat-input');
+      const sendBtn = document.getElementById('send-btn');
+      const message = chatInput.value.trim();
+
+      if (!message || isWaitingResponse || !isAuthenticated) return;
+
+      // 如果没有当前会话，创建一个
+      if (!currentSessionId && window.sessionAPI) {
+        const title = message.substring(0, 50) + (message.length > 50 ? '...' : '');
+        const session = await window.sessionAPI.create(title, 'code', currentModel);
+        currentSessionId = session.id;
+        await loadSessions();
+      }
+
+      addMessage(message, 'user');
+
+      // 保存用户消息到数据库
+      if (window.messageAPI && currentSessionId) {
+        await window.messageAPI.add(currentSessionId, 'user', message, Math.ceil(message.length / 4));
+      }
+
+      chatInput.value = '';
+      chatInput.style.height = 'auto';
+
+      isWaitingResponse = true;
+      sendBtn.disabled = true;
+      addTypingIndicator();
+
+      let assistantMessage = null;
+      let responseText = '';
+
+      window.chatAPI.sendMessage(message, {
+        onChunk: (text) => {
+          removeTypingIndicator();
+          if (!assistantMessage) {
+            assistantMessage = addMessage('', 'assistant');
+          }
+          responseText += text;
+          assistantMessage.textContent = responseText;
+          document.getElementById('messages-container').scrollTop =
+            document.getElementById('messages-container').scrollHeight;
+        },
+        onDone: async (data) => {
+          removeTypingIndicator();
+          if (!responseText && !assistantMessage) {
+            addMessage('(No response)', 'system');
+          }
+
+          // 保存助手消息到数据库
+          if (window.messageAPI && currentSessionId && responseText) {
+            await window.messageAPI.add(currentSessionId, 'assistant', responseText, data?.outputTokens || 0);
+          }
+
+          // 更新用量统计
+          await loadUsageStats();
+
+          // 清空附件
+          attachments = [];
+          renderAttachments();
+
+          isWaitingResponse = false;
+          sendBtn.disabled = false;
+        },
+        onError: (error) => {
+          removeTypingIndicator();
+          addMessage(`Error: ${error}`, 'error');
+          isWaitingResponse = false;
+          sendBtn.disabled = false;
+        }
+      }, {
+        model: currentModel,
+        sessionId: currentSessionId,
+        mode: currentMode,
+        workingDir: currentWorkingDir,
+        attachments: attachments
+      });
+    }
+
+    // Chat input handlers
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    chatInput.addEventListener('input', () => {
+      chatInput.style.height = 'auto';
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+      sendBtn.disabled = !chatInput.value.trim() || !isAuthenticated;
+    });
+
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+      }
+    });
+
+    sendBtn.addEventListener('click', sendChatMessage);
+
+    // New conversation
+    document.getElementById('new-conversation-btn').addEventListener('click', () => {
+      const container = document.getElementById('messages-container');
+      const welcome = document.getElementById('chat-welcome');
+
+      container.innerHTML = '';
+      container.classList.remove('has-messages');
+      welcome.style.display = 'flex';
+
+      // 重置当前会话
+      currentSessionId = null;
+      renderSessions();
+
+      document.querySelector('.icon-btn[data-view=chat]').click();
+    });
+
+    // 搜索会话
+    document.querySelector('.search-box input').addEventListener('input', async (e) => {
+      const query = e.target.value.trim();
+      if (query && window.sessionAPI) {
+        sessions = await window.sessionAPI.search(query);
+      } else {
+        sessions = await window.sessionAPI.list();
+      }
+      renderSessions();
+    });
+
+    // ==================== Bridge ====================
+    let feishuConnected = false;
+
+    async function initBridge() {
+      if (!window.bridgeAPI) return;
+
+      // 加载配置
+      const config = await window.bridgeAPI.getConfig();
+      if (config.feishu) {
+        document.getElementById('feishu-app-id').value = config.feishu.appId || '';
+        document.getElementById('feishu-app-secret').value = config.feishu.appSecret || '';
+      }
+
+      // 检查状态
+      const status = await window.bridgeAPI.getStatus('feishu');
+      if (status.running) {
+        feishuConnected = true;
+        updateFeishuStatus('connected');
+        document.getElementById('feishu-logs').style.display = 'block';
+      }
+
+      // 监听日志
+      window.bridgeAPI.onLog((data) => {
+        if (data.platform === 'feishu') {
+          addLog('feishu', data.message, data.error);
+        }
+      });
+
+      // 监听状态变化
+      window.bridgeAPI.onStatusChange((data) => {
+        if (data.platform === 'feishu') {
+          if (data.status === 'stopped') {
+            feishuConnected = false;
+            updateFeishuStatus('stopped');
+          }
+        }
+      });
+    }
+
+    function updateFeishuStatus(status) {
+      const badge = document.querySelector('#feishu-status .status-badge');
+      const btn = document.getElementById('feishu-connect-btn');
+
+      badge.className = 'status-badge ' + status;
+
+      switch (status) {
+        case 'stopped':
+          badge.textContent = '未连接';
+          btn.textContent = '连接';
+          btn.disabled = false;
+          break;
+        case 'connecting':
+          badge.textContent = '连接中...';
+          btn.textContent = '连接中...';
+          btn.disabled = true;
+          break;
+        case 'connected':
+          badge.textContent = '已连接';
+          btn.textContent = '断开';
+          btn.disabled = false;
+          break;
+        case 'error':
+          badge.textContent = '错误';
+          btn.textContent = '重试';
+          btn.disabled = false;
+          break;
+      }
+    }
+
+    async function saveFeishuConfig() {
+      const appId = document.getElementById('feishu-app-id').value.trim();
+      const appSecret = document.getElementById('feishu-app-secret').value.trim();
+
+      if (!appId || !appSecret) {
+        alert('请填写 App ID 和 App Secret');
+        return;
+      }
+
+      const config = await window.bridgeAPI.getConfig();
+      config.feishu = { appId, appSecret, enabled: true };
+      await window.bridgeAPI.saveConfig(config);
+
+      addLog('feishu', '配置已保存', false);
+    }
+
+    async function toggleFeishuBridge() {
+      if (feishuConnected) {
+        // 断开
+        const result = await window.bridgeAPI.stop('feishu');
+        if (result.success) {
+          feishuConnected = false;
+          updateFeishuStatus('stopped');
+          addLog('feishu', 'Bridge 已停止', false);
+        }
+      } else {
+        // 先保存配置
+        await saveFeishuConfig();
+
+        // 连接
+        updateFeishuStatus('connecting');
+        document.getElementById('feishu-logs').style.display = 'block';
+        addLog('feishu', '正在启动 Bridge...', false);
+
+        const result = await window.bridgeAPI.start('feishu');
+
+        if (result.success) {
+          feishuConnected = true;
+          updateFeishuStatus('connected');
+          addLog('feishu', 'Bridge 已启动，可以在飞书中发送消息了！', false);
+        } else {
+          updateFeishuStatus('error');
+          addLog('feishu', '启动失败: ' + (result.error || '未知错误'), true);
+        }
+      }
+    }
+
+    function addLog(platform, message, isError = false) {
+      const logsContent = document.getElementById(platform + '-logs-content');
+      if (!logsContent) return;
+
+      const time = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.className = 'log-line' + (isError ? ' error' : '');
+      line.textContent = `[${time}] ${message}`;
+      logsContent.appendChild(line);
+      logsContent.scrollTop = logsContent.scrollHeight;
+    }
+
+    function clearLogs(platform) {
+      const logsContent = document.getElementById(platform + '-logs-content');
+      if (logsContent) {
+        logsContent.innerHTML = '';
+      }
+    }
+
+    function togglePassword(inputId) {
+      const input = document.getElementById(inputId);
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function openExternal(url) {
+      if (window.electronAPI) {
+        window.electronAPI.openExternal(url);
+      } else {
+        window.open(url, '_blank');
+      }
+      return false;
+    }
+
+    // ==================== Init ====================
+    window.addEventListener('DOMContentLoaded', async () => {
+      // 加载保存的设置
+      if (window.settingsAPI) {
+        try {
+          const savedTheme = await window.settingsAPI.get('theme', 'light');
+          if (savedTheme === 'dark') {
+            toggleTheme();
+          }
+
+          const savedLang = await window.settingsAPI.get('language', 'zh');
+          setLanguage(savedLang);
+        } catch (e) {
+          console.error('Failed to load settings:', e);
+        }
+      }
+
+      // 加载工作目录
+      if (window.workingDirAPI) {
+        try {
+          currentWorkingDir = await window.workingDirAPI.get();
+          updateWorkingDirDisplay();
+        } catch (e) {}
+      }
+
+      // 终端延迟初始化（切换到终端视图时才初始化）
+      await checkAuthStatus();
+      await initBridge();
+      await loadSessions();
+      await loadUsageStats();
+
+      // Get app info
+      if (window.electronAPI) {
+        try {
+          const info = await window.electronAPI.getAppInfo();
+          document.getElementById('version-text').textContent = `v${info.version}`;
+        } catch (e) {}
+      }
+    });
+  </script>
+</body>
+</html>
